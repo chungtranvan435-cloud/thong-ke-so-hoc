@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Mềm Theo Dõi & Thống Kê Bộ Số (00 - 99)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-matrix {
+            display: grid;
+            grid-template-columns: repeat(50, minmax(42px, 1fr));
+            grid-template-rows: repeat(10, 36px);
+            gap: 1px;
+            background-color: #374151;
+        }
+        .cell-even-group {
+            background-color: #374151;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        .cell-odd-group {
+            background-color: #1f2937;
+            color: #fb923c;
+            font-weight: bold;
+        }
+        .cell-empty {
+            background-color: #111827;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen p-4 font-sans">
+
+    <!-- Header -->
+    <div class="max-w-[1700px] mx-auto mb-6 flex flex-wrap justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-lg">
+        <div>
+            <h1 class="text-2xl font-bold text-indigo-400 flex items-center gap-2">
+                <span>📊</span> Phần Mềm Theo Dõi & Thống Kê Bộ Số (00 - 99)
+            </h1>
+            <p class="text-sm text-gray-400">Theo dõi nhịp nhảy cột ma trận 50 cột x 10 dòng</p>
+        </div>
+        <div class="flex gap-3 mt-3 sm:mt-0">
+            <button onclick="clearCurrentMatrix()" class="px-4 py-2 bg-red-900/50 hover:bg-red-800 text-red-200 rounded-lg border border-red-700 text-sm font-medium transition">
+                Xóa Bảng Hiện Tại
+            </button>
+        </div>
+    </div>
+
+    <!-- Form Nhập Liệu & Lưu -->
+    <div class="max-w-[1700px] mx-auto mb-8 bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-md">
+        <h2 class="text-lg font-semibold text-indigo-300 mb-4 flex items-center gap-2">
+            <span>➕</span> NHẬP KẾT QUẢ MỚI
+        </h2>
+        <form id="inputForm" onsubmit="handleRenderMatrix(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">Ngày Mở Thưởng</label>
+                <input type="date" id="inputDate" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">Giờ Mở Thưởng</label>
+                <input type="time" id="inputTime" value="18:15" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1">Các Số Kết Quả (Phân cách bằng dấu phẩy)</label>
+                <input type="text" id="inputResults" placeholder="Ví dụ: 43, 06, 01, 24, 78, 62..." required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500 text-sm">
+            </div>
+            <div class="md:col-span-3 flex justify-end gap-3 pt-2">
+                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition text-sm">
+                    Hiển Thị Lên Ma Trận
+                </button>
+                <button type="button" onclick="saveCurrentResult()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg shadow-md transition text-sm">
+                    💾 Lưu Kết Quả Ngày Này
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Danh Sách Lịch Sử Đã Lưu -->
+    <div class="max-w-[1700px] mx-auto mb-8 bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-md">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+            <span>📜</span> LỊCH SỬ KẾT QUẢ ĐÃ LƯU
+        </h2>
+        <div id="savedList" class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar text-sm">
+            <p class="text-gray-500 italic">Chưa có kết quả nào được lưu.</p>
+        </div>
+    </div>
+
+    <!-- KHU VỰC MA TRẬN BẢNG 1 & BẢNG 2 -->
+    <div class="max-w-[1700px] mx-auto space-y-10">
+        
+        <!-- BẢNG 1 -->
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-md">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                <h2 class="text-lg font-bold text-blue-400">
+                    BẢNG 1: THẮNG THEO ĐIỀU KIỆN PHÂN LOẠI 1
+                </h2>
+                <div class="flex items-center gap-4 text-xs">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-gray-700 rounded-sm border border-blue-400"></span> <strong class="text-blue-300">Phần 1:</strong> Bộ số Kép + Thuần Chẵn</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-gray-900 rounded-sm border border-orange-400"></span> <strong class="text-orange-300">Phần 2:</strong> Bộ số Thuần Lẻ + Lẻ Chẵn</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar pb-2">
+                <div id="matrix1" class="grid-matrix min-w-[2100px] rounded-lg overflow-hidden border border-gray-700"></div>
+            </div>
+        </div>
+
+        <!-- BẢNG 2 -->
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-md">
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+                <h2 class="text-lg font-bold text-emerald-400">
+                    BẢNG 2: THẮNG THEO ĐIỀU KIỆN PHÂN LOẠI 2
+                </h2>
+                <div class="flex items-center gap-4 text-xs">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-gray-700 rounded-sm border border-blue-400"></span> <strong class="text-blue-300">Phần 1:</strong> Thuần Lẻ + Thuần Chẵn + Bộ Kép</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-gray-900 rounded-sm border border-orange-400"></span> <strong class="text-orange-300">Phần 2:</strong> Bộ số Lẻ Chẵn (1 chẵn 1 lẻ)</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar pb-2">
+                <div id="matrix2" class="grid-matrix min-w-[2100px] rounded-lg overflow-hidden border border-gray-700"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LOGIC XỬ LÝ -->
+    <script>
+        let currentNumbers = [];
+
+        document.getElementById('inputDate').valueAsDate = new Date();
+
+        // PHÂN LOẠI BẢNG 1
+        function getGroupTable1(numStr) {
+            const num = parseInt(numStr, 10);
+            const d1 = Math.floor(num / 10);
+            const d2 = num % 10;
+
+            const isKep = (d1 === d2);
+            const isD1Even = (d1 % 2 === 0);
+            const isD2Even = (d2 % 2 === 0);
+
+            if (isKep || (isD1Even && isD2Even)) {
+                return 1;
+            } else {
+                return 2;
+            }
+        }
+
+        // PHÂN LOẠI BẢNG 2
+        function getGroupTable2(numStr) {
+            const num = parseInt(numStr, 10);
+            const d1 = Math.floor(num / 10);
+            const d2 = num % 10;
+
+            const isKep = (d1 === d2);
+            const isD1Even = (d1 % 2 === 0);
+            const isD2Even = (d2 % 2 === 0);
+
+            const isThuanChan = isD1Even && isD2Even;
+            const isThuanLe = (!isD1Even) && (!isD2Even);
+
+            if (isKep || isThuanChan || isThuanLe) {
+                return 1;
+            } else {
+                return 2;
+            }
+        }
+
+        function handleRenderMatrix(e) {
+            if(e) e.preventDefault();
+            const raw = document.getElementById('inputResults').value;
+            const nums = raw.split(/[\s,]+/).map(s => s.trim()).filter(s => s.length > 0);
+            currentNumbers = nums.map(n => n.padStart(2, '0'));
+            renderAll();
+        }
+
+        function clearCurrentMatrix() {
+            currentNumbers = [];
+            document.getElementById('inputResults').value = '';
+            renderAll();
+        }
+
+        // DỰNG MA TRẬN 50x10
+        function buildMatrix(getGroupFn, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const columns = Array.from({ length: 50 }, () => []);
+            let currentCol = 0;
+            let lastGroup = null;
+
+            for (let num of currentNumbers) {
+                let group = getGroupFn(num);
+
+                if (lastGroup !== null && group !== lastGroup) {
+                    currentCol++;
+                }
+
+                if (currentCol >= 50) break;
+
+                if (columns[currentCol].length >= 10) {
+                    currentCol++;
+                    if (currentCol >= 50) break;
+                }
+
+                columns[currentCol].push({ num, group });
+                lastGroup = group;
+            }
+
+            for (let row = 9; row >= 0; row--) {
+                for (let col = 0; col < 50; col++) {
+                    const cellData = columns[col][row];
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = "flex items-center justify-center text-xs border-r border-b border-gray-800/50";
+
+                    if (cellData) {
+                        cellDiv.textContent = cellData.num;
+                        if (cellData.group === 1) {
+                            cellDiv.classList.add('cell-even-group');
+                        } else {
+                            cellDiv.classList.add('cell-odd-group');
+                        }
+                    } else {
+                        const colGroup = columns[col].length > 0 ? columns[col][0].group : null;
+                        if (colGroup === 1) {
+                            cellDiv.classList.add('bg-gray-800/40');
+                        } else if (colGroup === 2) {
+                            cellDiv.classList.add('bg-gray-900/60');
+                        } else {
+                            cellDiv.classList.add('cell-empty');
+                        }
+                    }
+
+                    container.appendChild(cellDiv);
+                }
+            }
+        }
+
+        function renderAll() {
+            buildMatrix(getGroupTable1, 'matrix1');
+            buildMatrix(getGroupTable2, 'matrix2');
+        }
+
+        // LƯU & XEM LỊCH SỬ DỮ LIỆU
+        function saveCurrentResult() {
+            const date = document.getElementById('inputDate').value;
+            const time = document.getElementById('inputTime').value;
+            const rawResults = document.getElementById('inputResults').value;
+
+            if (!rawResults.trim()) {
+                alert('Vui lòng nhập kết quả trước khi lưu!');
+                return;
+            }
+
+            const record = { id: Date.now(), date, time, rawResults };
+            let history = JSON.parse(localStorage.getItem('number_history') || '[]');
+            history.unshift(record);
+            localStorage.setItem('number_history', JSON.stringify(history));
+
+            loadSavedHistory();
+            alert('Đã lưu kết quả thành công!');
+        }
+
+        function loadSavedHistory() {
+            const history = JSON.parse(localStorage.getItem('number_history') || '[]');
+            const container = document.getElementById('savedList');
+
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 italic">Chưa có kết quả nào được lưu.</p>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="flex items-center justify-between bg-gray-800 p-2.5 rounded-lg border border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <span class="text-indigo-400 font-semibold">${item.date} (${item.time})</span>
+                        <span class="text-gray-300 font-mono text-xs">${item.rawResults}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="applyHistory('${item.rawResults}', '${item.date}', '${item.time}')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-xs rounded text-white font-medium">
+                            Tải Lại
+                        </button>
+                        <button onclick="deleteHistory(${item.id})" class="px-2.5 py-1 bg-red-700 hover:bg-red-600 text-xs rounded text-white font-medium">
+                            Xóa
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyHistory(rawResults, date, time) {
+            document.getElementById('inputDate').value = date;
+            document.getElementById('inputTime').value = time;
+            document.getElementById('inputResults').value = rawResults;
+            handleRenderMatrix();
+        }
+
+        function deleteHistory(id) {
+            let history = JSON.parse(localStorage.getItem('number_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('number_history', JSON.stringify(history));
+            loadSavedHistory();
+        }
+
+        // Khởi tạo hiển thị
+        renderAll();
+        loadSavedHistory();
+    </script>
+</body>
+</html>
